@@ -71,13 +71,4 @@ public class editCards extends AppCompatActivity {
         });
 
     }
-
-    public void onClickExcluir(View view)
-    {
-
-    }
-
-    public void onClickSalvar(View view) {
-
-    }
 }

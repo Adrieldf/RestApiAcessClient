@@ -83,6 +83,29 @@ public class BDSQLiteHelper extends SQLiteOpenHelper {
             return card;
         }
     }
+    public Card getCardByName(String name) {
+      SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(TABELA_CARDS, // a. tabela
+                COLUNAS, // b. colunas
+                " name = ?", // c. colunas para comparar
+                new String[]{name}, // d. parâmetros
+                null, // e. group by
+                null, // f. having
+                null, // g. order by
+                null); // h. limit
+        if (cursor == null) {
+            return null;
+        } else {
+            if(cursor.moveToFirst())
+            {
+                Card card = cursorToCard(cursor);
+                return card;
+            }
+            else {
+                return null;
+            }
+        }
+    }
 
     private Card cursorToCard(Cursor cursor) {
         Card card = new Card();

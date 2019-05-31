@@ -53,6 +53,9 @@ public class MtgAdapter extends RecyclerView.Adapter<MtgAdapter.ViewHolder> {
         }
         public void onClick(View view) {
             Toast.makeText(view.getContext(),"Você selecionou " + cards.get(getLayoutPosition()).getName(),Toast.LENGTH_LONG).show();
+         //   Intent intent = new Intent(MainActivity.this, editCards.class);
+          //  intent.putExtra("ID", mainCards.get(viewHolder.getAdapterPosition()).getId());
+         //   startActivity(intent);
         }
     }
 }

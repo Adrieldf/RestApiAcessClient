@@ -11,9 +11,12 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.ucs.adriel.restapiacessclient.adapter.MtgAdapter;
@@ -47,15 +50,26 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         bd = new BDSQLiteHelper(this);
-
     }
-    private void getMtgCards(){
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        updateUIStatus();
+    }
+
+    private void getMtgCards(String name){
         clearRecyclerView();
         final RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        MtgApiInterface apiService = MtgApiClient.getClient().create(MtgApiInterface.class);
+        MtgApiInterface  apiService = MtgApiClient.getClient().create(MtgApiInterface.class);
+        Call<Cards> call;
+      /*  if(name != "")
+            call = apiService.getCardsByName(name);
+        else*/
+            call = apiService.getAllCards();
         dataIsLocal = false;
-        Call<Cards> call = apiService.getAllCards();
+
         call.enqueue(new Callback<Cards>() {
             @Override
             public void onResponse(Call<Cards> call, Response<Cards> response) {
@@ -66,14 +80,6 @@ public class MainActivity extends AppCompatActivity {
                     recyclerView.setAdapter(new MtgAdapter(mainCards));
                     resultsCount = mainCards.size();
                     showOnlineSearchCount();
-
-                    List<Card> bdCards = bd.getAllCards();
-                    for (int i = 0; i < bdCards.size(); i++){
-                        bd.deleteCard(bdCards.get(i));
-                    }
-                    for (int i = 0; i < mainCards.size(); i++)
-                        bd.addCard(mainCards.get(i));
-
                 }
             }
 
@@ -83,9 +89,11 @@ public class MainActivity extends AppCompatActivity {
                 Log.e("deu erro", t.toString());
             }
         });
+        updateUIStatus();
     }
     private void showOnlineSearchCount()
     {
+        updateUIStatus();
         Toast.makeText(this, resultsCount + " Resultados", Toast.LENGTH_SHORT).show();
     }
     private void showOnlineEditError()
@@ -100,6 +108,10 @@ public class MainActivity extends AppCompatActivity {
         final RecyclerView recyclerView = findViewById(R.id.recycler_view);
         recyclerView.setAdapter(new MtgAdapter(mainCards));
     }
+    public void onClickListItem(View view)
+    {
+
+    }
     public void onClickSearchLocal(View view)
     {
         clearRecyclerView();
@@ -108,8 +120,10 @@ public class MainActivity extends AppCompatActivity {
         final RecyclerView recyclerView = findViewById(R.id.recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(new MtgAdapter(mainCards));
-        Toast.makeText(this, mainCards.size() + " Resultados", Toast.LENGTH_SHORT).show();
 
+
+
+        Toast.makeText(this, mainCards.size() + " Resultados", Toast.LENGTH_SHORT).show();
         ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
             @Override
             public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder viewHolder1) {
@@ -140,27 +154,98 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
+
         };
 
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleItemTouchCallback);
         itemTouchHelper.attachToRecyclerView(recyclerView);
+        updateUIStatus();
     }
 
     public void onClickSearchOnline(View view)
     {
       /*  if(isInternetWorking())
         {
-            getMtgCards();
+            getMtgCards("");
        }
         else {
             Toast.makeText(this, "Sem conexão com a internet", Toast.LENGTH_SHORT).show();
         }*/
-        getMtgCards();
+        getMtgCards("");
     }
 
     public void onClickSaveData(View view)
-    {
+    {updateUIStatus();
+        if(dataIsLocal || mainCards == null) {
+            Toast.makeText(this, "Consulte os dados online para poder salva-los", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        else
+        {
+            for (int i = 0; i < mainCards.size(); i++)
+                bd.addCard(mainCards.get(i));
+            Toast.makeText(this, "Os dados online foram salvos localmente", Toast.LENGTH_SHORT).show();
+        }
 
+    }
+
+    public void onClickClearData(View view)
+    {
+        clearRecyclerView();
+        List<Card> bdCards = bd.getAllCards();
+        for (int i = 0; i < bdCards.size(); i++){
+            bd.deleteCard(bdCards.get(i));
+        }
+        dataIsLocal = true;
+        Toast.makeText(this, " Os dados locais foram excluídos", Toast.LENGTH_SHORT).show();
+        updateUIStatus();
+    }
+
+    public void onClickSearch(View view)
+    {
+        if(!dataIsLocal || mainCards == null)
+        {
+           // TextView txtSearch = findViewById(R.id.txtSearch);
+           // getMtgCards(String.valueOf(txtSearch.getText()).trim());
+             Toast.makeText(this, "Consulte os dados locais para poder pesquisar", Toast.LENGTH_SHORT).show();
+
+            return;
+        }
+        TextView txtSearch = findViewById(R.id.txtSearch);
+        Card card = bd.getCardByName(String.valueOf(txtSearch.getText()).trim());
+        mainCards.clear();
+        if(card != null)
+        {
+            mainCards.add(card);
+        }
+
+        final RecyclerView recyclerView = findViewById(R.id.recycler_view);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setAdapter(new MtgAdapter(mainCards));
+        updateUIStatus();
+    }
+
+    public void updateUIStatus()
+    {
+        TextView lblCurrentData = findViewById(R.id.lblCurrentData);
+        TextView lblCurrentAmount = findViewById(R.id.lblCurrentAmount);
+        Button btnClearDB = findViewById(R.id.btnClearDB);
+        Button btnSaveData = findViewById(R.id.btnSaveData);
+        if(dataIsLocal){
+            lblCurrentData.setText("Dados Atuais: LOCAL");
+            btnClearDB.setEnabled(true);
+            btnSaveData.setEnabled(false);
+        }else
+        {
+            lblCurrentData.setText("Dados Atuais: ONLINE");
+            btnClearDB.setEnabled(false);
+            btnSaveData.setEnabled(true);
+        }
+
+        if(mainCards == null)
+            lblCurrentAmount.setText("Total: 0");
+        else
+            lblCurrentAmount.setText("Total: " + mainCards.size());
     }
 
     public boolean isInternetWorking() {
